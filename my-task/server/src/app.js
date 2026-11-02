@@ -14,6 +14,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Trust reverse proxy (Render, Railway, Heroku, Nginx) for HTTPS cookie transmission
+app.set('trust proxy', 1);
+
 // Security Headers
 app.use(
   helmet({
