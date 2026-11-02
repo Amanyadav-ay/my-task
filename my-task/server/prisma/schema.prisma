@@ -1,0 +1,357 @@
+// Prisma Schema for MY TASK Productivity Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String                   @id @default(uuid())
+  name                   String
+  email                  String                   @unique
+  passwordHash           String
+  userType               String                   @default("personal") // student, professional, freelancer, personal
+  isVerified             Boolean                  @default(true) // default to true for seamless local dev; verification flow available
+  avatarUrl              String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  preferences            UserPreferences?
+  tasks                  Task[]
+  categories             TaskCategory[]
+  goals                  Goal[]
+  notifications          Notification[]
+  pushSubscriptions      PushSubscription[]
+  focusSessions          FocusSession[]
+  userAchievements       UserAchievement[]
+  calendarEvents         CalendarEvent[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens    PasswordResetToken[]
+  refreshSessions        RefreshSession[]
+  habitRecords           HabitRecord[]
+  weeklyReports          WeeklyReport[]
+
+  @@map("users")
+}
+
+model UserPreferences {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                String   @default("light") // light, dark
+  emailNotifications   Boolean  @default(true)
+  pushNotifications    Boolean  @default(false)
+  pomodoroWorkDuration Int      @default(25)
+  pomodoroShortBreak   Int      @default(5)
+  pomodoroLongBreak    Int      @default(15)
+  soundEnabled         Boolean  @default(true)
+  autoStartBreaks      Boolean  @default(false)
+  updatedAt            DateTime @updatedAt
+
+  @@map("user_preferences")
+}
+
+model TaskCategory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  color     String   @default("#6C4DE6")
+  icon      String   @default("tag")
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tasks     Task[]
+
+  @@index([userId])
+  @@map("task_categories")
+}
+
+model Task {
+  id                 String           @id @default(uuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  categoryId         String?
+  category           TaskCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  priority           String           @default("MEDIUM") // LOW, MEDIUM, HIGH
+  status             String           @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE
+  startDate          DateTime?
+  dueDate            DateTime?
+  dueTime            String?          // e.g. "17:30"
+  reminderTime       DateTime?
+  estimatedDuration  Int?             // in minutes
+  progressPercentage Int              @default(0)
+  notes              String?
+  goalId             String?
+  goal               Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  subtasks           Subtask[]
+  attachments        TaskAttachment[]
+  recurrence         TaskRecurrence?
+  calendarEvents     CalendarEvent[]
+  focusSessions      FocusSession[]
+  notifications      Notification[]
+
+  @@index([userId, status])
+  @@index([userId, dueDate])
+  @@map("tasks")
+}
+
+model Subtask {
+  id          String   @id @default(uuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  isCompleted Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([taskId])
+  @@map("subtasks")
+}
+
+model TaskAttachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fileName  String
+  fileUrl   String
+  fileType  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@map("task_attachments")
+}
+
+model TaskRecurrence {
+  id                 String    @id @default(uuid())
+  taskId             String    @unique
+  task               Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  frequency          String    // NEVER, DAILY, WEEKLY, MONTHLY, CUSTOM
+  interval           Int       @default(1)
+  daysOfWeek         String?   // JSON string e.g. '["MON","WED"]'
+  endDate            DateTime?
+  count              Int?
+  occurrencesCreated Int       @default(0)
+  createdAt          DateTime  @default(now())
+
+  @@map("task_recurrences")
+}
+
+model Goal {
+  id                 String          @id @default(uuid())
+  userId             String
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  category           String?
+  startDate          DateTime        @default(now())
+  targetDate         DateTime?
+  status             String          @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, ARCHIVED, PAUSED
+  progressPercentage Float           @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  milestones         GoalMilestone[]
+  tasks              Task[]
+
+  @@index([userId, status])
+  @@map("goals")
+}
+
+model GoalMilestone {
+  id          String   @id @default(uuid())
+  goalId      String
+  goal        Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title       String
+  isCompleted Boolean  @default(false)
+  dueDate     DateTime?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([goalId])
+  @@map("goal_milestones")
+}
+
+model Notification {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  message      String
+  type         String    @default("REMINDER") // REMINDER, DEADLINE, COMPLETION, ACHIEVEMENT, SYSTEM
+  isRead       Boolean   @default(false)
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  taskId       String?
+  task         Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, isRead])
+  @@index([scheduledFor])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model FocusSession {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId          String?
+  task            Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  durationMinutes Int
+  type            String    @default("WORK") // WORK, SHORT_BREAK, LONG_BREAK
+  completed       Boolean   @default(true)
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, startedAt])
+  @@map("focus_sessions")
+}
+
+model Achievement {
+  id               String            @id @default(uuid())
+  code             String            @unique
+  title            String
+  description      String
+  icon             String
+  category         String            // TASK, GOAL, FOCUS, STREAK
+  badgeLevel       String            @default("BRONZE") // BRONZE, SILVER, GOLD, PLATINUM
+  points           Int               @default(10)
+  requirementCount Int               @default(1)
+  createdAt        DateTime          @default(now())
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievements")
+}
+
+model CalendarEvent {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  start       DateTime
+  end         DateTime?
+  allDay      Boolean  @default(false)
+  color       String   @default("#6C4DE6")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, start])
+  @@map("calendar_events")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model RefreshSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@map("refresh_sessions")
+}
+
+model HabitRecord {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  frequency     String    @default("DAILY")
+  targetCount   Int       @default(1)
+  currentStreak Int       @default(0)
+  bestStreak    Int       @default(0)
+  lastLoggedDate DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@map("habit_records")
+}
+
+model WeeklyReport {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart           DateTime
+  weekEnd             DateTime
+  tasksCreated        Int      @default(0)
+  tasksCompleted      Int      @default(0)
+  tasksPending        Int      @default(0)
+  tasksOverdue        Int      @default(0)
+  focusTimeMinutes    Int      @default(0)
+  goalProgressAverage Float    @default(0)
+  summaryNotes        String?
+  createdAt           DateTime @default(now())
+
+  @@index([userId, weekStart])
+  @@map("weekly_reports")
+}

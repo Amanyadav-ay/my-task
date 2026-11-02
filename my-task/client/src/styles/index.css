@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* FullCalendar SaaS Styling Overrides */
+.fc {
+  font-family: inherit;
+}
+.fc .fc-toolbar-title {
+  font-size: 1.15rem !important;
+  font-weight: 700;
+  color: #1f2937;
+}
+.dark .fc .fc-toolbar-title {
+  color: #f9fafb !important;
+}
+.fc .fc-button-primary {
+  background-color: #6C4DE6 !important;
+  border-color: #6C4DE6 !important;
+  font-size: 0.85rem !important;
+  border-radius: 0.5rem !important;
+  font-weight: 500 !important;
+  text-transform: capitalize !important;
+  box-shadow: none !important;
+}
+.fc .fc-button-primary:hover {
+  background-color: #5839D6 !important;
+  border-color: #5839D6 !important;
+}
+.fc .fc-button-primary:disabled {
+  background-color: #a5b4fc !important;
+  border-color: #a5b4fc !important;
+}
+.fc-theme-standard th, .fc-theme-standard td {
+  border-color: #f1f5f9 !important;
+}
+.dark .fc-theme-standard th, .dark .fc-theme-standard td {
+  border-color: #334155 !important;
+}
+.dark .fc-col-header-cell-cushion {
+  color: #cbd5e1 !important;
+}
+.dark .fc-daygrid-day-number {
+  color: #e2e8f0 !important;
+}
+.fc-event {
+  border-radius: 4px !important;
+  padding: 2px 4px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.fc-event:hover {
+  transform: translateY(-1px);
+}
