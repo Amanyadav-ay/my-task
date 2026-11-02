@@ -17,12 +17,11 @@ if (config.env === 'production') {
 export const connectDatabase = async () => {
   try {
     await prisma.$connect();
-    console.log('✅ PostgreSQL Database connected successfully via Prisma');
+    console.log('✅ Database connected successfully via Prisma');
     return true;
   } catch (error) {
     console.error('❌ Failed to connect to database via Prisma:');
     console.error(error.message);
-    console.warn('⚠️  Please ensure your DATABASE_URL in .env is configured and PostgreSQL is running.');
     return false;
   }
 };

@@ -1,12 +1,12 @@
-// Prisma Schema for MY TASK Productivity Platform
+// Prisma Schema for MY TASK Productivity Platform (Default: Zero-Config Local SQLite, instantly switchable to PostgreSQL via schema.postgresql.prisma)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -14,8 +14,8 @@ model User {
   name                   String
   email                  String                   @unique
   passwordHash           String
-  userType               String                   @default("personal") // student, professional, freelancer, personal
-  isVerified             Boolean                  @default(true) // default to true for seamless local dev; verification flow available
+  userType               String                   @default("personal")
+  isVerified             Boolean                  @default(true)
   avatarUrl              String?
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
@@ -34,15 +34,13 @@ model User {
   refreshSessions        RefreshSession[]
   habitRecords           HabitRecord[]
   weeklyReports          WeeklyReport[]
-
-  @@map("users")
 }
 
 model UserPreferences {
   id                   String   @id @default(uuid())
   userId               String   @unique
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme                String   @default("light") // light, dark
+  theme                String   @default("light")
   emailNotifications   Boolean  @default(true)
   pushNotifications    Boolean  @default(false)
   pomodoroWorkDuration Int      @default(25)
@@ -51,8 +49,6 @@ model UserPreferences {
   soundEnabled         Boolean  @default(true)
   autoStartBreaks      Boolean  @default(false)
   updatedAt            DateTime @updatedAt
-
-  @@map("user_preferences")
 }
 
 model TaskCategory {
@@ -68,7 +64,6 @@ model TaskCategory {
   tasks     Task[]
 
   @@index([userId])
-  @@map("task_categories")
 }
 
 model Task {
@@ -79,13 +74,13 @@ model Task {
   description        String?
   categoryId         String?
   category           TaskCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  priority           String           @default("MEDIUM") // LOW, MEDIUM, HIGH
-  status             String           @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE
+  priority           String           @default("MEDIUM")
+  status             String           @default("PENDING")
   startDate          DateTime?
   dueDate            DateTime?
-  dueTime            String?          // e.g. "17:30"
+  dueTime            String?
   reminderTime       DateTime?
-  estimatedDuration  Int?             // in minutes
+  estimatedDuration  Int?
   progressPercentage Int              @default(0)
   notes              String?
   goalId             String?
@@ -103,7 +98,6 @@ model Task {
 
   @@index([userId, status])
   @@index([userId, dueDate])
-  @@map("tasks")
 }
 
 model Subtask {
@@ -117,7 +111,6 @@ model Subtask {
   updatedAt   DateTime @updatedAt
 
   @@index([taskId])
-  @@map("subtasks")
 }
 
 model TaskAttachment {
@@ -131,22 +124,19 @@ model TaskAttachment {
   createdAt DateTime @default(now())
 
   @@index([taskId])
-  @@map("task_attachments")
 }
 
 model TaskRecurrence {
   id                 String    @id @default(uuid())
   taskId             String    @unique
   task               Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  frequency          String    // NEVER, DAILY, WEEKLY, MONTHLY, CUSTOM
+  frequency          String
   interval           Int       @default(1)
-  daysOfWeek         String?   // JSON string e.g. '["MON","WED"]'
+  daysOfWeek         String?
   endDate            DateTime?
   count              Int?
   occurrencesCreated Int       @default(0)
   createdAt          DateTime  @default(now())
-
-  @@map("task_recurrences")
 }
 
 model Goal {
@@ -158,7 +148,7 @@ model Goal {
   category           String?
   startDate          DateTime        @default(now())
   targetDate         DateTime?
-  status             String          @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, ARCHIVED, PAUSED
+  status             String          @default("IN_PROGRESS")
   progressPercentage Float           @default(0)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -167,7 +157,6 @@ model Goal {
   tasks              Task[]
 
   @@index([userId, status])
-  @@map("goals")
 }
 
 model GoalMilestone {
@@ -182,7 +171,6 @@ model GoalMilestone {
   updatedAt   DateTime @updatedAt
 
   @@index([goalId])
-  @@map("goal_milestones")
 }
 
 model Notification {
@@ -191,7 +179,7 @@ model Notification {
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title        String
   message      String
-  type         String    @default("REMINDER") // REMINDER, DEADLINE, COMPLETION, ACHIEVEMENT, SYSTEM
+  type         String    @default("REMINDER")
   isRead       Boolean   @default(false)
   scheduledFor DateTime?
   sentAt       DateTime?
@@ -201,7 +189,6 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([scheduledFor])
-  @@map("notifications")
 }
 
 model PushSubscription {
@@ -214,7 +201,6 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
-  @@map("push_subscriptions")
 }
 
 model FocusSession {
@@ -224,14 +210,13 @@ model FocusSession {
   taskId          String?
   task            Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
   durationMinutes Int
-  type            String    @default("WORK") // WORK, SHORT_BREAK, LONG_BREAK
+  type            String    @default("WORK")
   completed       Boolean   @default(true)
   startedAt       DateTime  @default(now())
   endedAt         DateTime?
   createdAt       DateTime  @default(now())
 
   @@index([userId, startedAt])
-  @@map("focus_sessions")
 }
 
 model Achievement {
@@ -240,15 +225,13 @@ model Achievement {
   title            String
   description      String
   icon             String
-  category         String            // TASK, GOAL, FOCUS, STREAK
-  badgeLevel       String            @default("BRONZE") // BRONZE, SILVER, GOLD, PLATINUM
+  category         String
+  badgeLevel       String            @default("BRONZE")
   points           Int               @default(10)
   requirementCount Int               @default(1)
   createdAt        DateTime          @default(now())
 
   userAchievements UserAchievement[]
-
-  @@map("achievements")
 }
 
 model UserAchievement {
@@ -261,7 +244,6 @@ model UserAchievement {
 
   @@unique([userId, achievementId])
   @@index([userId])
-  @@map("user_achievements")
 }
 
 model CalendarEvent {
@@ -280,7 +262,6 @@ model CalendarEvent {
   updatedAt   DateTime @updatedAt
 
   @@index([userId, start])
-  @@map("calendar_events")
 }
 
 model EmailVerificationToken {
@@ -292,7 +273,6 @@ model EmailVerificationToken {
   createdAt DateTime @default(now())
 
   @@index([token])
-  @@map("email_verification_tokens")
 }
 
 model PasswordResetToken {
@@ -304,7 +284,6 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@index([token])
-  @@map("password_reset_tokens")
 }
 
 model RefreshSession {
@@ -318,7 +297,6 @@ model RefreshSession {
   createdAt DateTime @default(now())
 
   @@index([token])
-  @@map("refresh_sessions")
 }
 
 model HabitRecord {
@@ -334,7 +312,6 @@ model HabitRecord {
   createdAt     DateTime  @default(now())
 
   @@index([userId])
-  @@map("habit_records")
 }
 
 model WeeklyReport {
@@ -353,5 +330,4 @@ model WeeklyReport {
   createdAt           DateTime @default(now())
 
   @@index([userId, weekStart])
-  @@map("weekly_reports")
 }
